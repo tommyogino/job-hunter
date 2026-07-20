@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Local secrets
+.env
+
+# Do NOT ignore data/jobs.db — it is committed on purpose to persist state
