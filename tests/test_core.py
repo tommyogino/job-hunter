@@ -1,3 +1,4 @@
+from job_hunter.config import Config
 from job_hunter.db import Database
 from job_hunter.models import Job
 from job_hunter.notify import format_message
@@ -89,6 +90,22 @@ def test_db_filter_new_and_mark_seen():
     assert not db.is_empty()
     assert db.filter_new([a, b]) == [b]
     db.close()
+
+
+def test_empty_env_vars_fall_back_to_defaults(monkeypatch):
+    # No GitHub Actions, vars não definidas viram string vazia, não "unset".
+    for name in [
+        "MAX_NOTIFICATIONS_PER_RUN",
+        "REQUEST_TIMEOUT",
+        "JOB_SEARCH_TERMS",
+        "NOTIFY_ON_FIRST_RUN",
+        "ENTRY_LEVEL_ONLY",
+    ]:
+        monkeypatch.setenv(name, "")
+    cfg = Config.from_env()  # não pode levantar ValueError
+    assert cfg.max_notifications == 20
+    assert cfg.request_timeout == 30
+    assert cfg.search_terms == ["python"]
 
 
 def test_format_message_escapes_html():
