@@ -1,0 +1,54 @@
+name: job-hunter
+
+on:
+  schedule:
+    # A cada 3 horas (UTC). Ajuste conforme quiser.
+    - cron: "0 */3 * * *"
+  workflow_dispatch: {}
+
+# Necessário para dar commit do banco SQLite de volta ao repositório.
+permissions:
+  contents: write
+
+# Evita execuções concorrentes escrevendo no mesmo banco.
+concurrency:
+  group: job-hunter
+  cancel-in-progress: false
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run job hunter
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_SEARCH_TERMS: ${{ vars.JOB_SEARCH_TERMS }}
+          JOB_KEYWORDS: ${{ vars.JOB_KEYWORDS }}
+          MAX_NOTIFICATIONS_PER_RUN: ${{ vars.MAX_NOTIFICATIONS_PER_RUN }}
+          NOTIFY_ON_FIRST_RUN: ${{ vars.NOTIFY_ON_FIRST_RUN }}
+        run: python -m job_hunter
+
+      - name: Persist SQLite database
+        run: |
+          if [[ -n "$(git status --porcelain data/jobs.db)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/jobs.db
+            git commit -m "chore: atualiza banco de vagas vistas [skip ci]"
+            git push
+          else
+            echo "Sem mudanças no banco para commitar."
+          fi
